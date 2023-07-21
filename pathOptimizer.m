@@ -1,5 +1,4 @@
 % TO-DO
-% 1) Add in Level requirements
 % 2) Add in Fast travel consideration
 % 3) Update cost function for both distance and level discrepancy
 % 4) Add in Prerequisite node requirements
@@ -59,17 +58,41 @@ function [nodeTable, startNode, pathType, mapImg] = problemSetup()
         
         nodeTable = readtable(fullInputPath,opts);
         
+        newRequiresVec = cell(length(nodeTable.Name),1);
+        
+        for nodeRow = 1:length(nodeTable.Name)
+            requirementStr = nodeTable.Requires(nodeRow);
+            
+            if (~ismissing(requirementStr))
+                newRequiresVec{nodeRow,1} = [split(requirementStr,";")]';
+            end
+        end
+        
+        nodeTable.Requires = newRequiresVec;
+        
+        newFastTravelVec = cell(length(nodeTable.Name),1);
+        
+        for nodeRow = 1:length(nodeTable.Name)
+            fasttravelStr = nodeTable.FastTravelsTo(nodeRow);
+            
+            if (~ismissing(fasttravelStr))
+                newFastTravelVec{nodeRow,1} = [split(fasttravelStr,";")]';
+            end
+        end
+        
+        nodeTable.FastTravelsTo = newFastTravelVec;
+        
         nodeTable.Node = zeros(length(nodeTable.Name),1);
         nodeTable.isStart = zeros(length(nodeTable.Node),1);
     catch
         clc
-        disp(['Input file is not formatted properly. File must have the following data:' newline newline '[Node ID, Node Name, X-Coord, Y-Coord, is Repeatable (bool), is Start Node (bool)]'])
+        disp(['Input file is not formatted properly. File must have the following data columns:' newline newline '[Node Name, X-Coord, Y-Coord, Is-Repeatable (bool), Level, Required Nodes (if any), Fast Travel Nodes (if any)]'])
     end
 
     lenNodes = length(nodeTable.Name);
     
-    for ii = 1:lenNodes
-        nodeTable.Node(ii) = ii;
+    for nodeItr = 1:lenNodes
+        nodeTable.Node(nodeItr) = nodeItr;
     end
 
     nodeTable = movevars(nodeTable,"Node",'Before',1);
@@ -141,12 +164,16 @@ function [newPath, minCost] = insertNode(currentPath,insertedNode,type)
 
         for ii = 2:(length(currentPath(:,1))-1)
             if (currentPath{(ii+1),1}~=insertedNode{1,1} && currentPath{ii,1}~=insertedNode{1,1})
-                testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
-                newCost = pathCost(testPath);
-
-                if (newCost < minCost)
-                    newPath = testPath;
-                    minCost = newCost;
+                if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
+                    testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
+                    newCost = pathCost(testPath);
+                    
+                    if (newCost < minCost)
+                        newPath = testPath;
+                        minCost = newCost;
+                    end
+                else
+                    continue
                 end
             else
                 continue
@@ -307,6 +334,7 @@ function pathOut = solver(nodeTable, startNode, type)
                 unvisitedNodes{unvisitedItr,2} = nodeTable.Name(tableIdx);
                 unvisitedNodes{unvisitedItr,3} = [nodeTable.X(tableIdx) nodeTable.Y(tableIdx)];
                 unvisitedNodes{unvisitedItr,4} = nodeTable.isRepeatable(tableIdx);
+                unvisitedNodes{unvisitedItr,5} = nodeTable.Requires(tableIdx);
                 
                 if (nodeTable.isRepeatable(tableIdx) == 1)
                     repeatableCounter = repeatableCounter + 1;
@@ -323,15 +351,15 @@ function pathOut = solver(nodeTable, startNode, type)
         unvisitedLen = length([unvisitedNodes{:,1}]);
         
         if (type == "closed")
-            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)];nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)]};
+            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
         else
-            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)]};
+            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
         end
         
         allRepeatsVisited = 0;
         while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
             randIdx = randi(unvisitedLen);
-            randNode = unvisitedNodes(randIdx,1:3);
+            randNode = unvisitedNodes(randIdx,[1:3 5]);
             isRepeatable = unvisitedNodes{randIdx,4};
             
             [path, newPathCost] = insertNode(path,randNode,type);
