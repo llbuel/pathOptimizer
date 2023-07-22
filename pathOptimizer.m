@@ -4,10 +4,13 @@
 % 4) Add in Prerequisite node requirements
 % 5) Refactor solver() to while loop for solution convergence
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 try
     [nodeTable, startNode, pathType, mapImg] = problemSetup();
 catch
-    disp('Program canceled.')
     return
 end
 
@@ -18,7 +21,8 @@ if ispc
     outPath = createPathPlot(dir,nodeTable,startNode,path,pathType,mapImg);
 else
     dir = uigetdir(pwd,'Save Solution File');
-    outPath = createSolnFile(dir,path);
+    mapPath = [];
+    outPath = createSolnFile(dir,path,mapPath);
 end
 
 writePathOutput(path,pathType);
@@ -27,6 +31,8 @@ disp(['...' newline newline 'Full path solution saved to:']);
 disp(outPath);
 disp(newline);
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -86,7 +92,7 @@ function [nodeTable, startNode, pathType, mapImg] = problemSetup()
         nodeTable.isStart = zeros(length(nodeTable.Node),1);
     catch
         clc
-        disp(['Input file is not formatted properly. File must have the following data columns:' newline newline '[Node Name, X-Coord, Y-Coord, Is-Repeatable (bool), Level, Required Nodes (if any), Fast Travel Nodes (if any)]'])
+        disp(['Program canceled: Input file is not formatted properly.' newline 'File must have the following data columns:' newline newline '[Node Name, X-Coord, Y-Coord, Is-Repeatable (bool), Level, Required Nodes (if any), Fast Travel Nodes (if any)]'])
     end
 
     lenNodes = length(nodeTable.Name);
@@ -156,28 +162,38 @@ function mapOut = importMap()
     mapOut = imread(mapFile,'png');
 end
 
-function [newPath, minCost] = insertNode(currentPath,insertedNode,type)
+function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode,type)
     if (type=="closed")
         testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
         minCost = pathCost(testPath);
         newPath = testPath;
+        
+        if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
+            isValidInsert = 1;
+        else
+            isValidInsert = 0;
+        end
 
         for ii = 2:(length(currentPath(:,1))-1)
-            if (currentPath{(ii+1),1}~=insertedNode{1,1} && currentPath{ii,1}~=insertedNode{1,1})
-                if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
-                    testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
-                    newCost = pathCost(testPath);
-                    
-                    if (newCost < minCost)
-                        newPath = testPath;
-                        minCost = newCost;
-                    end
-                else
-                    continue
+            requirementsMet = isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1});
+            
+            if (currentPath{(ii+1),1}~=insertedNode{1,1} && currentPath{ii,1}~=insertedNode{1,1} && requirementsMet)
+                testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
+                newCost = pathCost(testPath);
+
+                if (newCost < minCost)
+                    newPath = testPath;
+                    minCost = newCost;
+                    isValidInsert = 1;
                 end
             else
                 continue
             end
+        end
+        
+        if (~isValidInsert)
+            newPath = currentPath;
+            minCost = pathCost(currentPath);
         end
     else
         if (length(currentPath(:,1))==1)
@@ -279,10 +295,12 @@ function filepath = createPathPlot(dir, nodeTable, startNode, path, type, map)
         winopen(fullFigPath);
     end
     
-    createSolnFile(dir,path);
+    mapPath = figPath;
+    
+    createSolnFile(dir,path,mapPath);
 end
 
-function filePath = createSolnFile(dir,path)
+function filePath = createSolnFile(dir,path,mapPath)
     stopNum = [1:length(path(:,1))]';
     stopName = cell(length(path(:,1)),1);
     stopX = cell(length(path(:,1)),1);
@@ -296,9 +314,12 @@ function filePath = createSolnFile(dir,path)
     
     outTable = table(stopNum,stopName,stopX,stopY,'VariableNames',{'Stop','Name','X','Y'});
     
-    outFileBase = strcat("pathOptimizerSolution-",string(datetime('now'),"yyyy-MM-dd-HH-mm-ss"));
-    
-    filePath = fullfile(dir,outFileBase);
+    if (~isempty(mapPath))
+        filePath = mapPath; 
+    else
+        outFileBase = strcat("pathOptimizerSolution-",string(datetime('now'),"yyyy-MM-dd-HH-mm-ss"));
+        filePath = fullfile(dir,outFileBase);
+    end
     
     if ~exist(filePath,'dir')
        mkdir(filePath)
@@ -362,19 +383,23 @@ function pathOut = solver(nodeTable, startNode, type)
             randNode = unvisitedNodes(randIdx,[1:3 5]);
             isRepeatable = unvisitedNodes{randIdx,4};
             
-            [path, newPathCost] = insertNode(path,randNode,type);
+            [path, newPathCost, insertStatus] = insertNode(path,randNode,type);
             
-            if (~isRepeatable)
-                newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
-                unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
-                unvisitedLen = length([unvisitedNodes{:,1}]);
-            else
-                repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
-                repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
-                
-                if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
-                    allRepeatsVisited = 1;
+            if (insertStatus)
+                if (~isRepeatable)
+                    newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
+                    unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
+                    unvisitedLen = length([unvisitedNodes{:,1}]);
+                else
+                    repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
+                    repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
+
+                    if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
+                        allRepeatsVisited = 1;
+                    end
                 end
+            else
+                continue
             end
         end
 
