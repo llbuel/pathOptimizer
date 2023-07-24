@@ -315,6 +315,7 @@ function filePath = createSolnFile(dir,path,mapPath)
     outTable = table(stopNum,stopName,stopX,stopY,'VariableNames',{'Stop','Name','X','Y'});
     
     if (~isempty(mapPath))
+        outFileBase = extractAfter(mapPath,(strlength(mapPath)-41));
         filePath = mapPath; 
     else
         outFileBase = strcat("pathOptimizerSolution-",string(datetime('now'),"yyyy-MM-dd-HH-mm-ss"));
@@ -385,21 +386,17 @@ function pathOut = solver(nodeTable, startNode, type)
             
             [path, newPathCost, insertStatus] = insertNode(path,randNode,type);
             
-            if (insertStatus)
-                if (~isRepeatable)
-                    newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
-                    unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
-                    unvisitedLen = length([unvisitedNodes{:,1}]);
-                else
-                    repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
-                    repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
-
-                    if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
-                        allRepeatsVisited = 1;
-                    end
-                end
+            if (~isRepeatable)
+                newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
+                unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
+                unvisitedLen = length([unvisitedNodes{:,1}]);
             else
-                continue
+                repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
+                repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
+
+                if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
+                    allRepeatsVisited = 1;
+                end
             end
         end
 
