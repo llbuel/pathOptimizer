@@ -164,36 +164,30 @@ end
 
 function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode,type)
     if (type=="closed")
+        numValid = 0;
         testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
         minCost = pathCost(testPath);
         newPath = testPath;
         
         if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
-            isValidInsert = 1;
-        else
-            isValidInsert = 0;
+            numValid = numValid + 1;
         end
 
         for ii = 2:(length(currentPath(:,1))-1)
-            requirementsMet = isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1});
+            testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
             
-            if (currentPath{(ii+1),1}~=insertedNode{1,1} && currentPath{ii,1}~=insertedNode{1,1} && requirementsMet)
-                testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
-                newCost = pathCost(testPath);
-
-                if (newCost < minCost)
-                    newPath = testPath;
-                    minCost = newCost;
-                    isValidInsert = 1;
-                end
+            if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
+                numValid = numValid + 1;
             else
                 continue
             end
-        end
-        
-        if (~isValidInsert)
-            newPath = currentPath;
-            minCost = pathCost(currentPath);
+            
+            newCost = pathCost(testPath);
+
+            if (newCost < minCost)
+                newPath = testPath;
+                minCost = newCost;
+            end
         end
     else
         if (length(currentPath(:,1))==1)
@@ -219,6 +213,12 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
                 minCost = newCost;
             end
         end
+    end
+    
+    if (numValid > 0)
+        isValidInsert = 1;
+    else
+        isValidInsert = 0;
     end
 end
 
@@ -378,6 +378,8 @@ function pathOut = solver(nodeTable, startNode, type)
             path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
         end
         
+        pathPrevious = path;
+        
         allRepeatsVisited = 0;
         while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
             randIdx = randi(unvisitedLen);
@@ -385,6 +387,13 @@ function pathOut = solver(nodeTable, startNode, type)
             isRepeatable = unvisitedNodes{randIdx,4};
             
             [path, newPathCost, insertStatus] = insertNode(path,randNode,type);
+            
+            if (~insertStatus)
+                path = pathPrevious;
+                continue
+            else
+                pathPrevious = path;
+            end
             
             if (~isRepeatable)
                 newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
