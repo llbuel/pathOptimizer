@@ -1,7 +1,6 @@
 % TO-DO
 % 2) Add in Fast travel consideration
 % 3) Update cost function for both distance and level discrepancy
-% 4) Add in Prerequisite node requirements
 % 5) Refactor solver() to while loop for solution convergence
 
 
@@ -165,12 +164,20 @@ end
 function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode,type)
     if (type=="closed")
         numValid = 0;
-        testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
-        minCost = pathCost(testPath);
-        newPath = testPath;
+        isValidInsert = 0;
         
         if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
             numValid = numValid + 1;
+            
+            testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
+            minCost = pathCost(testPath);
+            newPath = testPath;
+            
+            isValidInsert = 1;
+        else
+            isValidInsert = 0;
+            newPath = currentPath;
+            minCost = pathCost(currentPath);
         end
 
         for ii = 2:(length(currentPath(:,1))-1)
@@ -179,6 +186,10 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
             if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
                 numValid = numValid + 1;
             else
+                continue
+            end
+            
+            if (insertedNode{1,1} == currentPath{ii,1} || insertedNode{1,1} == currentPath{(ii+1),1} || (length(testPath(:,1)) > 3 && insertedNode{1,1} == currentPath{(ii-1),1}) || ((length(testPath(:,1))-2)>ii && insertedNode{1,1} == currentPath{(ii+2),1}))
                 continue
             end
             
@@ -219,6 +230,8 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
         isValidInsert = 1;
     else
         isValidInsert = 0;
+        newPath = currentPath;
+        minCost = pathCost(currentPath);
     end
 end
 
@@ -381,6 +394,9 @@ function pathOut = solver(nodeTable, startNode, type)
         pathPrevious = path;
         
         allRepeatsVisited = 0;
+        
+        % Add limit on repeat visits
+        
         while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
             randIdx = randi(unvisitedLen);
             randNode = unvisitedNodes(randIdx,[1:3 5]);
