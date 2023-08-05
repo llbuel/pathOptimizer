@@ -2,7 +2,6 @@
 % 1) Update open-loop and open-with-end solutions to match closed-loop
 % 2) Add in Fast travel consideration
 % 3) Update cost function for both distance and level discrepancy
-% 5) Refactor solver() to while loop for solution convergence
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -354,109 +353,143 @@ function filePath = createSolnFile(dir,path,mapPath)
     end
 end
 
-function pathOut = solver(nodeTable, startNode, type)
+function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
     lenCoords = length(nodeTable.Node(:));
-%     loopLim = round(200-200*exp(-1*0.0277*lenCoords));
-    loopLim = 5;
-    
-    for ii = 1:loopLim
-        clc
-        disp(['Start Node: ' char(nodeTable.Name(startNode)) newline 'Solution Type: ' char(type) newline newline 'Generating solution... '])
-        disp([num2str(int64((ii/loopLim)*100)) '%'])
-        
-        unvisitedNodes = cell.empty;
 
-        unvisitedItr = 1;
-        repeatableCounter = 0;
-        for tableIdx = 1:lenCoords
-            if (tableIdx ~= startNode)
-                unvisitedNodes{unvisitedItr,1} = nodeTable.Node(tableIdx);
-                unvisitedNodes{unvisitedItr,2} = nodeTable.Name(tableIdx);
-                unvisitedNodes{unvisitedItr,3} = [nodeTable.X(tableIdx) nodeTable.Y(tableIdx)];
-                unvisitedNodes{unvisitedItr,4} = nodeTable.isRepeatable(tableIdx);
-                unvisitedNodes{unvisitedItr,5} = nodeTable.Requires(tableIdx);
-                
-                if (nodeTable.isRepeatable(tableIdx) == 1)
-                    repeatableCounter = repeatableCounter + 1;
-                    repeatableVisited{repeatableCounter,1} = nodeTable.Node(tableIdx);
-                    repeatableVisited{repeatableCounter,2} = 0;
-                end
+    unvisitedNodes = cell.empty;
 
-                unvisitedItr = unvisitedItr + 1;
+    unvisitedItr = 1;
+    repeatableCounter = 0;
+    for tableIdx = 1:lenCoords
+        if (tableIdx ~= startNode)
+            unvisitedNodes{unvisitedItr,1} = nodeTable.Node(tableIdx);
+            unvisitedNodes{unvisitedItr,2} = nodeTable.Name(tableIdx);
+            unvisitedNodes{unvisitedItr,3} = [nodeTable.X(tableIdx) nodeTable.Y(tableIdx)];
+            unvisitedNodes{unvisitedItr,4} = nodeTable.isRepeatable(tableIdx);
+            unvisitedNodes{unvisitedItr,5} = nodeTable.Requires(tableIdx);
+
+            if (nodeTable.isRepeatable(tableIdx) == 1)
+                repeatableCounter = repeatableCounter + 1;
+                repeatableVisited{repeatableCounter,1} = nodeTable.Node(tableIdx);
+                repeatableVisited{repeatableCounter,2} = 0;
+            end
+
+            unvisitedItr = unvisitedItr + 1;
+        end
+    end
+
+    numRepeatable = sum(nodeTable.isRepeatable(:));
+
+    unvisitedLen = length([unvisitedNodes{:,1}]);
+
+    if (type == "closed")
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+    elseif (type == "open-with-end")
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+    else
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+    end
+
+    pathPrevious = path;
+
+    allRepeatsVisited = 0;
+    repeatLimit = round(0.10*length(nodeTable.Node));
+
+    while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
+        randIdx = randi(unvisitedLen);
+        randNode = unvisitedNodes(randIdx,[1:3 5]);
+        isRepeatable = unvisitedNodes{randIdx,4};
+
+        if (isRepeatable)
+            repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
+        end
+
+        if (isRepeatable && length(find([repeatableVisited{:,2}]>=repeatLimit)) == length(repeatableVisited(:,1)))
+            while (isRepeatable)
+                randIdx = randi(unvisitedLen);
+                randNode = unvisitedNodes(randIdx,[1:3 5]);
+                isRepeatable = unvisitedNodes{randIdx,4};
             end
         end
 
-        numRepeatable = sum(nodeTable.isRepeatable(:));
+        if (isRepeatable && (~isempty(find([repeatableVisited{repeatVisitedIdx,2}]>=repeatLimit)) || (length(path(:,1))>1 && randNode{1,1}==path{2,1})))
+            continue
+        end
 
-        unvisitedLen = length([unvisitedNodes{:,1}]);
-        
-        if (type == "closed")
-            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
-        elseif (type == "open-with-end")
-            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+        if (~isempty(randNode{1,4}{1,1}) && sum(ismember([path{:,2}],randNode{1,4}{1,1}))~=length(randNode{1,4}{1,1}))
+            continue
+        end
+
+        [path, newPathCost, insertStatus] = insertNode(path,randNode,type);
+
+        if (~insertStatus)
+            path = pathPrevious;
+            continue
         else
-            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
-        end
-        
-        pathPrevious = path;
-        
-        allRepeatsVisited = 0;
-        repeatLimit = round(0.10*length(nodeTable.Node));
-        
-        while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
-            randIdx = randi(unvisitedLen);
-            randNode = unvisitedNodes(randIdx,[1:3 5]);
-            isRepeatable = unvisitedNodes{randIdx,4};
-            
-            if (isRepeatable)
-                repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
-            end
-            
-            if (isRepeatable && length(find([repeatableVisited{:,2}]>=repeatLimit)) == length(repeatableVisited(:,1)))
-                while (isRepeatable)
-                    randIdx = randi(unvisitedLen);
-                    randNode = unvisitedNodes(randIdx,[1:3 5]);
-                    isRepeatable = unvisitedNodes{randIdx,4};
-                end
-            end
-            
-            if (isRepeatable && (~isempty(find([repeatableVisited{repeatVisitedIdx,2}]>=repeatLimit)) || (length(path(:,1))>1 && randNode{1,1}==path{2,1})))
-                continue
-            end
-            
-            if (~isempty(randNode{1,4}{1,1}) && sum(ismember([path{:,2}],randNode{1,4}{1,1}))~=length(randNode{1,4}{1,1}))
-                continue
-            end
-            
-            [path, newPathCost, insertStatus] = insertNode(path,randNode,type);
-            
-            if (~insertStatus)
-                path = pathPrevious;
-                continue
-            else
-                pathPrevious = path;
-            end
-            
-            if (~isRepeatable)
-                newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
-                unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
-                unvisitedLen = length([unvisitedNodes{:,1}]);
-            else
-                repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
-
-                if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
-                    allRepeatsVisited = 1;
-                end
-            end
+            pathPrevious = path;
         end
 
-        if((ii==1) || (ii>1 && newPathCost<finalPathCost))
-            finalPathCost = newPathCost;
-            finalPath = path;
+        if (~isRepeatable)
+            newUnvisitedIdx = [1:(randIdx-1) (randIdx+1):unvisitedLen];
+            unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
+            unvisitedLen = length([unvisitedNodes{:,1}]);
+        else
+            repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
+
+            if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
+                allRepeatsVisited = 1;
+            end
+        end
+    end
+
+    pathCostOut = newPathCost;
+    pathOut = path;
+end
+
+function pathOut = solver(nodeTable, startNode, type)
+    clc
+    disp(['Start Node: ' char(nodeTable.Name(startNode)) newline 'Solution Type: ' char(type) newline newline 'Generating solution... '])
+            
+    lenCoords = length(nodeTable.Node(:));
+    loopLim = round(200-200*exp(-1*0.0277*lenCoords));
+%     loopLim = 20;
+    
+    [previousPath, previousPathCost] = algorithmIteration(nodeTable,startNode,type);
+    
+    costChangeThreshold = 5;
+    maxNoImprovement = lenCoords*0.1;
+    noImprovementCount = 0;
+    iterations = 0;
+    
+    while (iterations <= loopLim)
+        [newPath, newPathCost] = algorithmIteration(nodeTable,startNode,type);
+        
+        if (newPathCost>previousPathCost)
+            iterations = iterations + 1;
+            continue
+        end
+        
+        solnImprovement = ((previousPathCost - newPathCost)/previousPathCost)*100;
+        
+        clc
+        disp(['Start Node: ' char(nodeTable.Name(startNode)) newline 'Solution Type: ' char(type) newline newline 'Generating solution... ' newline num2str(round((iterations/loopLim)*100)) ' %' newline 'Cost reduction: ' num2str(round(solnImprovement)) '%'])
+        
+        if (solnImprovement <= costChangeThreshold)
+            noImprovementCount = noImprovementCount + 1;
+        else
+            noImprovementCount = 0;
+        end
+        
+        previousPathCost = newPathCost;
+        previousPath = newPath;
+        iterations = iterations + 1;
+        
+        if (noImprovementCount >= maxNoImprovement)
+            break
         end
     end
     
-    pathOut = finalPath;
+    pathOut = previousPath;
 end
 
 function writePathOutput(path,type)
@@ -464,8 +497,10 @@ function writePathOutput(path,type)
 
     if (type == "open")
         disp(['OPEN-LOOP SOLUTION: ' newline])
-    else
+    elseif (type == "closed")
         disp(['CLOSED-LOOP SOLUTION: ' newline])
+    else
+        disp(['OPEN-LOOP SOLUTION W/ ENDPOINT' newline])
     end
     
     for ii = 1:10
