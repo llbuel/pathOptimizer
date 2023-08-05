@@ -1,7 +1,6 @@
 % TO-DO
 % 1) Update open-loop and open-with-end solutions to match closed-loop
 % 2) Add in Fast travel consideration
-% 3) Update cost function for both distance and level discrepancy
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -240,9 +239,27 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
 end
 
 function cost = pathCost(path)
+    portalAdjustment = 500;
     cost = 0;
+    
     for ii = 1:(length(path(:,1))-1)
-        cost = cost + nodeDistance(path(ii,:),path((ii+1),:));
+        node1 = path(ii,:);
+        node2 = path((ii+1),:);
+    
+        cost = cost + (nodeDistance(node1, node2) + difficultyDifference(node1, node2));
+    end
+end
+
+function d = difficultyDifference(node1, node2)
+    level1 = node1{1,5};
+    level2 = node2{1,5};
+    
+    highLevelAdjustment = 75;
+    
+    if (level2 > level1)
+        d = highLevelAdjustment*(level2 - level1);
+    else
+        d = level2 - level1;
     end
 end
 
@@ -367,6 +384,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
             unvisitedNodes{unvisitedItr,3} = [nodeTable.X(tableIdx) nodeTable.Y(tableIdx)];
             unvisitedNodes{unvisitedItr,4} = nodeTable.isRepeatable(tableIdx);
             unvisitedNodes{unvisitedItr,5} = nodeTable.Requires(tableIdx);
+            unvisitedNodes{unvisitedItr,6} = nodeTable.Level(tableIdx);
 
             if (nodeTable.isRepeatable(tableIdx) == 1)
                 repeatableCounter = repeatableCounter + 1;
@@ -383,11 +401,11 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
     unvisitedLen = length([unvisitedNodes{:,1}]);
 
     if (type == "closed")
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
     elseif (type == "open-with-end")
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
     else
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
     end
 
     pathPrevious = path;
@@ -397,7 +415,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
 
     while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
         randIdx = randi(unvisitedLen);
-        randNode = unvisitedNodes(randIdx,[1:3 5]);
+        randNode = unvisitedNodes(randIdx,[1:3 5 6]);
         isRepeatable = unvisitedNodes{randIdx,4};
 
         if (isRepeatable)
@@ -407,7 +425,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
         if (isRepeatable && length(find([repeatableVisited{:,2}]>=repeatLimit)) == length(repeatableVisited(:,1)))
             while (isRepeatable)
                 randIdx = randi(unvisitedLen);
-                randNode = unvisitedNodes(randIdx,[1:3 5]);
+                randNode = unvisitedNodes(randIdx,[1:3 5 6]);
                 isRepeatable = unvisitedNodes{randIdx,4};
             end
         end
