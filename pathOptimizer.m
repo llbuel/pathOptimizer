@@ -1,4 +1,5 @@
 % TO-DO
+% 1) Update open-loop and open-with-end solutions to match closed-loop
 % 2) Add in Fast travel consideration
 % 3) Update cost function for both distance and level discrepancy
 % 5) Refactor solver() to while loop for solution convergence
@@ -101,7 +102,33 @@ function [nodeTable, startNode, pathType, mapImg] = problemSetup()
     end
 
     nodeTable = movevars(nodeTable,"Node",'Before',1);
+    
+    if ispc
+        mapImg = importMap();
+    else
+        mapImg = [];
+    end
 
+    inputErr = 1;
+
+    while(inputErr)
+        pathType = input("Output a closed-loop, open-loop, or open-loop with known endpoint solution? [c/o/w]: ","s");
+
+        if (pathType == "closed" || pathType == "c")
+            inputErr = 0;
+            pathType = "closed";
+        elseif (pathType == "open" || pathType == "o")
+            inputErr = 0;
+            pathType = "open";
+        elseif (pathType == "w")
+            inputErr = 0;
+            pathType = "open-with-end";
+        else
+            inputErr = 1;
+            disp(['Unrecognized selection.' newline])
+        end
+    end
+    
     clc
     startNodeInput = input("Enter the Name for the starting node: ","s");
 
@@ -118,31 +145,6 @@ function [nodeTable, startNode, pathType, mapImg] = problemSetup()
     end
     
     nodeTable.isStart(startNode) = 1;
-    
-    if ispc
-        mapImg = importMap();
-    else
-        mapImg = [];
-    end
-
-    inputErr = 1;
-
-    while(inputErr)
-        pathType = input("Output a closed-loop or open-loop solution? [closed/open]: ","s");
-
-        if (pathType == "closed" || pathType == "c")
-            inputErr = 0;
-            pathType = "closed";
-            disp([newline 'Generating solution...' newline])
-        elseif (pathType == "open" || pathType == "o")
-            inputErr = 0;
-            pathType = "open";
-            disp([newline 'Generating solution...' newline])
-        else
-            inputErr = 1;
-            disp(['Unrecognized selection.' newline])
-        end
-    end
 end
 
 function mapOut = importMap()
@@ -162,22 +164,18 @@ function mapOut = importMap()
 end
 
 function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode,type)
+    numValid = 0;
+
     if (type=="closed")
-        numValid = 0;
-        isValidInsert = 0;
+        testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
         
         if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
             numValid = numValid + 1;
-            
-            testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
             minCost = pathCost(testPath);
             newPath = testPath;
-            
-            isValidInsert = 1;
+            setPathCost = 0;
         else
-            isValidInsert = 0;
-            newPath = currentPath;
-            minCost = pathCost(currentPath);
+            setPathCost = 1;
         end
 
         for ii = 2:(length(currentPath(:,1))-1)
@@ -185,6 +183,13 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
             
             if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
                 numValid = numValid + 1;
+                
+                if (setPathCost)
+                    newPath = testPath;
+                    minCost = pathCost(testPath);
+                    
+                    setPathCost = 0;
+                end
             else
                 continue
             end
@@ -194,7 +199,7 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
             end
             
             newCost = pathCost(testPath);
-
+            
             if (newCost < minCost)
                 newPath = testPath;
                 minCost = newCost;
@@ -387,6 +392,8 @@ function pathOut = solver(nodeTable, startNode, type)
         
         if (type == "closed")
             path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
+        elseif (type == "open-with-end")
+            path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
         else
             path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode)};
         end
@@ -394,13 +401,32 @@ function pathOut = solver(nodeTable, startNode, type)
         pathPrevious = path;
         
         allRepeatsVisited = 0;
-        
-        % Add limit on repeat visits
+        repeatLimit = round(0.10*length(nodeTable.Node));
         
         while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
             randIdx = randi(unvisitedLen);
             randNode = unvisitedNodes(randIdx,[1:3 5]);
             isRepeatable = unvisitedNodes{randIdx,4};
+            
+            if (isRepeatable)
+                repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
+            end
+            
+            if (isRepeatable && length(find([repeatableVisited{:,2}]>=repeatLimit)) == length(repeatableVisited(:,1)))
+                while (isRepeatable)
+                    randIdx = randi(unvisitedLen);
+                    randNode = unvisitedNodes(randIdx,[1:3 5]);
+                    isRepeatable = unvisitedNodes{randIdx,4};
+                end
+            end
+            
+            if (isRepeatable && (~isempty(find([repeatableVisited{repeatVisitedIdx,2}]>=repeatLimit)) || (length(path(:,1))>1 && randNode{1,1}==path{2,1})))
+                continue
+            end
+            
+            if (~isempty(randNode{1,4}{1,1}) && sum(ismember([path{:,2}],randNode{1,4}{1,1}))~=length(randNode{1,4}{1,1}))
+                continue
+            end
             
             [path, newPathCost, insertStatus] = insertNode(path,randNode,type);
             
@@ -416,7 +442,6 @@ function pathOut = solver(nodeTable, startNode, type)
                 unvisitedNodes = unvisitedNodes(newUnvisitedIdx,:);
                 unvisitedLen = length([unvisitedNodes{:,1}]);
             else
-                repeatVisitedIdx = find([repeatableVisited{:,1}]==randNode{1,1});
                 repeatableVisited{repeatVisitedIdx,2} = repeatableVisited{repeatVisitedIdx,2} + 1;
 
                 if (length(find([repeatableVisited{:,2}]>0)) >= numRepeatable)
