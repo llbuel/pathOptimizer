@@ -511,15 +511,15 @@ function pathOut = solver(nodeTable, startNode, endNode, type)
     while (iterations <= loopLim)
         [newPath, newPathCost] = algorithmIteration(nodeTable,startNode,endNode,type);
         
+        clc
+        disp(['Start Node: ' char(nodeTable.Name(startNode)) newline 'Solution Type: ' char(type) newline newline 'Generating solution... ' newline num2str(round((iterations/loopLim)*100)) '%'])
+        
         if (newPathCost>previousPathCost)
             iterations = iterations + 1;
             continue
         end
         
         solnImprovement = ((previousPathCost - newPathCost)/previousPathCost)*100;
-        
-        clc
-        disp(['Start Node: ' char(nodeTable.Name(startNode)) newline 'Solution Type: ' char(type) newline newline 'Generating solution... ' newline num2str(round((iterations/loopLim)*100)) ' %' newline 'Cost reduction: ' num2str(round(solnImprovement)) '%'])
         
         if (solnImprovement <= costChangeThreshold)
             noImprovementCount = noImprovementCount + 1;
