@@ -7,12 +7,12 @@
 
 
 try
-    [nodeTable, startNode, pathType, mapImg] = problemSetup();
+    [nodeTable, startNode, endNode, pathType, mapImg] = problemSetup();
 catch
     return
 end
 
-path = solver(nodeTable,startNode,pathType);
+path = solver(nodeTable,startNode,endNode,pathType);
 
 if ispc
     dir = uigetdir('C:\','Save Solution Plot');
@@ -35,7 +35,7 @@ disp(newline);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function [nodeTable, startNode, pathType, mapImg] = problemSetup()
+function [nodeTable, startNode, endNode, pathType, mapImg] = problemSetup()
     clc    
 
     disp(['Select node file to import and optimize...' newline])
@@ -110,7 +110,7 @@ function [nodeTable, startNode, pathType, mapImg] = problemSetup()
     inputErr = 1;
 
     while(inputErr)
-        pathType = input("Output a closed-loop, open-loop, or open-loop with known endpoint solution? [c/o/w]: ","s");
+        pathType = input("Generate a closed-loop, open-loop, or open-loop with known endpoint solution? [c/o/w]: ","s");
 
         if (pathType == "closed" || pathType == "c")
             inputErr = 0;
@@ -143,6 +143,25 @@ function [nodeTable, startNode, pathType, mapImg] = problemSetup()
     end
     
     nodeTable.isStart(startNode) = 1;
+    
+    if (pathType=="open-with-end")
+        clc
+        endNodeInput = input("Enter the Name for the ending node: ","s");
+
+        endNode = find(nodeTable.Name==endNodeInput);
+
+        if (length(endNode)>1)
+            clc
+            disp(['More than one node has the entered name. Make sure that every node has a unique name and that the name entered is spelled correctly.' newline newline])
+            return
+        elseif (isempty(endNode))
+            clc
+            disp(['A node with a name matching the entered name does not exist. Make sure that every node has a unique name and that the name entered is spelled correctly.' newline newline])
+            return
+        end
+    else
+        endNode = nan();
+    end
 end
 
 function mapOut = importMap()
@@ -164,7 +183,7 @@ end
 function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode,type)
     numValid = 0;
 
-    if (type=="closed")
+    if (type=="closed" || type=="open-with-end")
         testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
         
         if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
@@ -297,14 +316,14 @@ function filepath = createPathPlot(dir, nodeTable, startNode, path, type, map)
         X = (([path{ii,3}(1) path{(ii+1),3}(1)]) * (axPosition(3) / length(map(1,:,1)))) + axPosition(1);
         Y = (([path{ii,3}(2) path{(ii+1),3}(2)]) * (axPosition(4) / length(map(:,1,1)))) + axPosition(2);
         
-        annotation(solnFig, 'arrow',X,Y,'Units','pixels','Color','m','LineWidth',2);
+        annotation(solnFig, 'arrow',X,Y,'Units','pixels','Color',[230 184 0]/255,'LineWidth',2);
     end
     
     scatter(nodeTable.X(:),nodeTable.Y(:),'o','filled','b');
 
     scatter(nodeTable.X(startNode),nodeTable.Y(startNode),'o','filled','g');
     
-    if (type=="open")
+    if (type=="open" || type=="open-with-end")
         scatter(path{end,3}(1), path{end,3}(2),'o','filled','r');
     end
     
@@ -370,8 +389,14 @@ function filePath = createSolnFile(dir,path,mapPath)
     end
 end
 
-function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
+function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, endNode, type)
     lenCoords = length(nodeTable.Node(:));
+    
+    if (~isnan(endNode))
+        endNodeExists = 1;
+    else
+        endNodeExists = 0;
+    end
 
     unvisitedNodes = cell.empty;
 
@@ -395,6 +420,10 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
             unvisitedItr = unvisitedItr + 1;
         end
     end
+    
+    if (endNodeExists)
+        unvisitedNodes(find([unvisitedNodes{:,1}]==endNode),:) = [];
+    end
 
     numRepeatable = sum(nodeTable.isRepeatable(:));
 
@@ -403,7 +432,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
     if (type == "closed")
         path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
     elseif (type == "open-with-end")
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(endNode) nodeTable.Name(endNode) [nodeTable.X(endNode) nodeTable.Y(endNode)] nodeTable.Requires(endNode) nodeTable.Level(endNode)};
     else
         path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
     end
@@ -464,7 +493,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, type)
     pathOut = path;
 end
 
-function pathOut = solver(nodeTable, startNode, type)
+function pathOut = solver(nodeTable, startNode, endNode, type)
     clc
     disp(['Start Node: ' char(nodeTable.Name(startNode)) newline 'Solution Type: ' char(type) newline newline 'Generating solution... '])
             
@@ -472,7 +501,7 @@ function pathOut = solver(nodeTable, startNode, type)
     loopLim = round(200-200*exp(-1*0.0277*lenCoords));
 %     loopLim = 20;
     
-    [previousPath, previousPathCost] = algorithmIteration(nodeTable,startNode,type);
+    [previousPath, previousPathCost] = algorithmIteration(nodeTable,startNode,endNode,type);
     
     costChangeThreshold = 5;
     maxNoImprovement = lenCoords*0.1;
@@ -480,7 +509,7 @@ function pathOut = solver(nodeTable, startNode, type)
     iterations = 0;
     
     while (iterations <= loopLim)
-        [newPath, newPathCost] = algorithmIteration(nodeTable,startNode,type);
+        [newPath, newPathCost] = algorithmIteration(nodeTable,startNode,endNode,type);
         
         if (newPathCost>previousPathCost)
             iterations = iterations + 1;
