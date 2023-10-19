@@ -1,0 +1,119 @@
+Name,X,Y,Map,isRepeatable,Level,Requires,FastTravelsTo,BreadcrumbsFrom,StartOnly
+Eversong Woods,3517,1677,0,0,15,,,,0
+Tirisfal Glades,3240,1443,0,0,25,,,,0
+Ghostlands,3517,1585,0,0,15,,,Eversong Woods,0
+Silverpine Forest,3211,1373,0,0,27,,,Tirisfal Glades,0
+Hillsbrad Foothills,3310,1340,0,0,22,,,Silverpine Forest,0
+Arathi Highlands,3425,1271,0,0,20,,,Hillsbrad Foothills,0
+Northern Stranglethorn,3331,711,0,0,20,,,Ashenvale,0
+The Cape of Stranglethorn,3275,671,0,0,20,,,Northern Stranglethorn,0
+The Hinterlands,3447,1365,0,0,20,,,Arathi Highlands,0
+Western Plaguelands,3367,1463,0,0,30,,,The Cape of Stranglethorn;The Hinterlands,0
+Eastern Plaguelands,3495,1457,0,0,28,,,Western Plaguelands,0
+Badlands,3457,1003,0,0,28,,,Eastern Plaguelands,0
+Searing Gorge,3343,1007,0,0,23,,,Badlands,0
+Burning Steppes,3387,947,0,0,23,,,Searing Gorge,0
+Swamp of Sorrows,3437,825,0,0,28,,,Burning Steppes,0
+Blasted Lands,3431,755,0,0,23,Temple of Ahn'Qiraj,,Swamp of Sorrows;Winterspring;Silithus,0
+Vashj'ir,,,,,,,,,0
+Twilight Highlands,,,,,,,,,0
+The Deadmines,3201,809,0,0,45,,,,0
+Stormwind Stockade,3251,935,0,0,40,,,,0
+Gnomeregan,3255,1085,0,0,40,,,,0
+Blackrock Depths,3326,986,0,0,40,Searing Gorge,,Searing Gorge,0
+Lower Blackrock Spire,3326,986,0,0,40,Searing Gorge,,Orgrimmar,0
+Molten Core,3326,986,0,0,45,Feralas;Dustwallow Marsh;Thousand Needles;Tanaris;Un'goro Crater;Silithus;Felwood;Winterspring;Western Plaguelands;Eastern Plaguelands;Badlands;Searing Gorge;Burning Steppes;Swamp of Sorrows;The Deadmines;Stormwind Stockade;Gnomeregan;Blackrock Depths;Lower Blackrock Spire;Ragefire Chasm,,,0
+Blackwing Lair,3326,986,0,0,45,Molten Core,,,0
+Karazhan,,,,,,,,,
+Magisters' Terrace,,,,,,,,,
+Sunwell Plateau,,,,,,,,,
+Blackrock Caverns,,,,,,,,,
+Bastion of Twilight,,,,,,,,,
+Blackwing Descent,,,,,,,,,
+Baradin Hold,,,,,,,,,
+Return to Karazhan,,,,,,,,,
+Silvermoon City,3522,1711,0,1,1,,Undercity;Orgrimmar,,0
+Undercity,3250,1427,0,1,1,,Silvermoon City,,0
+Brill,3259,1449,0,1,1,Tirisfal Glades,Orgrimmar;Grom'gol Base Camp,,0
+Grom'gol Base Camp,3299,724,0,1,1,,Orgrimmar;Brill,,0
+Booty Bay,3260,630,0,1,1,,Ratchet,,0
+Durotar,1145,1179,0,0,15,,,,0
+Mulgore,933,1081,0,0,15,,,,0
+Azshara,1219,1345,0,0,18,,,Durotar,0
+Northern Barrens,1055,1141,0,0,25,,,Durotar;Mulgore,0
+Ashenvale,1017,1317,0,0,26,,,Azshara;Northern Barrens,0
+Stonetalon Mountains,855,1247,0,0,20,,,Ashenvale,0
+Desolace,833,1097,0,0,27,,,Stonetalon Mountains,0
+Southern Barrens,1025,1009,0,0,27,,,Stonetalon Mountains,0
+Feralas,869,921,0,0,28,,,Desolace,0
+Dustwallow Marsh,1063,981,0,0,23,,,Southern Barrens;The Cape of Stranglethorn,0
+Thousand Needles,1043,899,0,0,28,,,Feralas;Dustwallow Marsh,0
+Felwood,979,1467,0,0,23,,,Thousand Needles,0
+Tanaris,1089,743,0,0,28,,,Thousand Needles,0
+Un'goro Crater,999,799,0,0,23,,,Tanaris,0
+Winterspring,1149,1563,0,0,23,,,Felwood,0
+Silithus,875,779,0,0,23,,,Un'goro Crater;Winterspring,0
+Mount Hyjal,,,,,,,,,0
+Uldum,,,,,,,,,0
+Ragefire Chasm,1145,1249,0,0,40,,,Orgrimmar,0
+Ruins of Ahn'Qiraj,841,739,0,0,45,Blackwing Lair,,,0
+Temple of Ahn'Qiraj,821,741,0,0,45,Ruins of Ahn'Qiraj,,,0
+Escape from Durnholde Keep,,,,,,,,,
+Opening the Dark Portal,,,,,,,,,
+Battle for Mount Hyjal,,,,,,,,,
+Culling of Stratholme,,,,,,,,,
+Onyxia's Lair,,,,,,,,,
+Throne of the Four Winds,,,,,,,,,
+Firelands,,,,,,,,,
+End Time,,,,,,,,,
+Well of Eternity,,,,,,,,,
+Hour of Twilight,,,,,,,,,
+Dragon Soul,,,,,,,,,
+"Ny'alotha, the Waking City",,,,,,,,,
+Orgrimmar,1145,1249,0,1,1,,Brill;Grom'gol Base Camp;Thunder Bluff;Silvermoon City,,0
+Thunder Bluff,919,1103,0,1,1,,Orgrimmar,,0
+Ratchet,1099,1125,0,1,1,,Booty Bay,,0
+Hellfire Peninsula,,,1,0,10,,,,0
+Zangarmarsh,,,1,0,10,,,,0
+Terrokar Forest,,,1,0,15,,,,0
+Nagrand,,,1,0,15,,,,0
+Blade's Edge Mountains,,,1,0,20,,,,0
+Netherstorm,,,1,0,25,,,,0
+Shadowmoon Valley,,,1,0,25,,,,0
+Dark Portal,,,0,1,10,Temple of Ahn'Qiraj,Hellfire Peninsula,Blasted Lands,0
+Borean Tundra,,,0,0,10,,,,0
+Howling Fjord,,,0,0,10,,,,0
+Dragonblight,,,0,0,15,,,,0
+Grizzly Hills,,,0,0,15,,,,0
+Zul'Drak,,,0,0,20,,,,0
+Sholazar Basin,,,0,0,20,,,,0
+Storm Peaks,,,0,0,25,,,,0
+Icecrown,,,0,0,25,,,,0
+,,,,,,,,,
+Goblin Intro,,,0,0,1,,,,1
+Deepholm,,,0,0,30,,,,0
+,,,,,,,,,
+The Jade Forest,,,0,0,10,,,,0
+Valley of the Four Winds,,,0,0,15,,,,0
+Krasarang Wilds,,,0,0,15,,,,0
+Kun-Lai Summit,,,0,0,20,,,,0
+Townlong Steppes,,,0,0,25,,,,0
+Dread Wastes,,,0,0,30,,,,0
+,,,,,,,,,
+Frostfire Ridge,,,2,0,10,,,,0
+Gorgrond,,,2,0,15,,,,0
+Talador,,,2,0,20,,,,0
+Spires of Arak,,,2,0,30,,,,0
+Nagrand,,,2,0,35,,,,0
+,,,,,,,,,
+Val'sharah,,,0,0,10,,,,0
+Stormheim,,,0,0,10,,,,0
+Azsuna,,,0,0,10,,,,0
+Highmountain,,,0,0,10,,,,0
+Suramar,,,0,0,45,,,,0
+The Broken Shore,,,0,0,45,,,,0
+Argus,,,3,0,45,,,,0
+,,,,,,,,,
+Zuldazar,,,0,0,10,,,,0
+Nazmir,,,0,0,20,,,,0
+Vol'dun,,,0,0,30,,,,0
