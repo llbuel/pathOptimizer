@@ -1,6 +1,5 @@
 % TO-DO
-% 1) Update open-loop and open-with-end solutions to match closed-loop
-% 2) Add in Fast travel consideration
+% 1) Fix last map arrow not plotting
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% MAIN %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -57,8 +56,8 @@ function [nodeTable, startNode, endNode, pathType, mapImg] = problemSetup()
     try
         opts = detectImportOptions(fullInputPath);
         
-        opts.VariableNames = {'Name','X','Y','isRepeatable','Level','Requires','FastTravelsTo'};
-        opts.VariableTypes = {'string','double','double','double','double','string','string'};
+        opts.VariableNames = {'Name','X','Y','Map','isRepeatable','Level','Requires','FastTravelsTo','BreadcrumbsFrom','StartOnly'};
+        opts.VariableTypes = {'string','double','double','double','double','double','string','string','string','double'};
         
         nodeTable = readtable(fullInputPath,opts);
         
@@ -85,6 +84,18 @@ function [nodeTable, startNode, endNode, pathType, mapImg] = problemSetup()
         end
         
         nodeTable.FastTravelsTo = newFastTravelVec;
+        
+        newBreadcrumbVec = cell(length(nodeTable.Name),1);
+        
+        for nodeRow = 1:length(nodeTable.Name)
+            breadcrumbStr = nodeTable.BreadcrumbsFrom(nodeRow);
+            
+            if (~ismissing(breadcrumbStr))
+                newBreadcrumbVec{nodeRow,1} = [split(breadcrumbStr,";")]';
+            end
+        end
+        
+        nodeTable.BreadcrumbsFrom = newBreadcrumbVec;
         
         nodeTable.Node = zeros(length(nodeTable.Name),1);
         nodeTable.isStart = zeros(length(nodeTable.Node),1);
@@ -128,17 +139,12 @@ function [nodeTable, startNode, endNode, pathType, mapImg] = problemSetup()
     end
     
     clc
-    startNodeInput = input("Enter the Name for the starting node: ","s");
-
-    startNode = find(nodeTable.Name==startNodeInput);
-
-    if (length(startNode)>1)
+    disp('Select the starting node from the dialog.');
+    [startNode,listDlgTF] = listdlg('ListString',nodeTable.Name,'PromptString','Select Starting Node:','SelectionMode','single');
+    
+    if (~listDlgTF)
         clc
-        disp(['More than one node has the entered name. Make sure that every node has a unique name and that the name entered is spelled correctly.' newline newline])
-        return
-    elseif (isempty(startNode))
-        clc
-        disp(['A node with a name matching the entered name does not exist. Make sure that every node has a unique name and that the name entered is spelled correctly.' newline newline])
+        disp('Program canceled.');
         return
     end
     
@@ -146,22 +152,74 @@ function [nodeTable, startNode, endNode, pathType, mapImg] = problemSetup()
     
     if (pathType=="open-with-end")
         clc
-        endNodeInput = input("Enter the Name for the ending node: ","s");
+        disp('Select the ending node from the dialog.');
+        [endNode,listDlgTF] = listdlg('ListString',nodeTable.Name,'PromptString','Select Ending Node:','SelectionMode','single');
 
-        endNode = find(nodeTable.Name==endNodeInput);
-
-        if (length(endNode)>1)
+        if (~listDlgTF)
             clc
-            disp(['More than one node has the entered name. Make sure that every node has a unique name and that the name entered is spelled correctly.' newline newline])
-            return
-        elseif (isempty(endNode))
-            clc
-            disp(['A node with a name matching the entered name does not exist. Make sure that every node has a unique name and that the name entered is spelled correctly.' newline newline])
+            disp('Program canceled.');
             return
         end
     else
         endNode = nan();
     end
+    
+    clc
+    disp('Remove any nodes?');
+    removeNodesYN = questdlg('Do you want to skip any nodes?','Skip Nodes','Yes','No','No');
+    
+    if (strcmp(removeNodesYN,'Yes'))
+        clc
+        disp('Select the nodes to skip from dialog.');
+        [skipNodes,listDlgTF] = listdlg('ListString',nodeTable.Name,'PromptString','Select Nodes to Skip:');
+        
+        if (listDlgTF)
+            if (sum(ismember(skipNodes,startNode))>0)
+                nodeTable.isStart(startNode) = 0;
+                
+                nodeTable = deleteNodes(skipNodes,nodeTable);
+                
+                clc
+                disp('Select the new starting node from the dialog.');
+                [startNode,listDlgTF] = listdlg('ListString',nodeTable.Name,'PromptString','Select New Starting Node:','SelectionMode','single');
+
+                if (~listDlgTF)
+                    clc
+                    disp('Program canceled.');
+                    return
+                end
+    
+                nodeTable.isStart(startNode) = 1;
+            else
+                nodeTable = deleteNodes(skipNodes,nodeTable);
+                
+                startNode = find(nodeTable.isStart==1);
+            end
+        end
+    end
+end
+
+function newNodeTable = deleteNodes(nodesToDelete,nodeTable)
+    nodeNames = nodeTable.Name(nodesToDelete);
+    nodeTable(nodesToDelete,:) = [];
+    requiresVec = nodeTable.Requires;
+    
+    for jj=1:length(nodeNames)
+        for ii=1:length(requiresVec)
+            if (~isempty(requiresVec{ii,1}) && (sum(strcmp(requiresVec{ii,1},nodeNames{jj}))>0))
+                strIdx = find(strcmp(nodeTable.Requires{ii,1},nodeNames{jj}));
+                nodeTable.Requires{ii,1}{1,strIdx} = [];
+                
+                nodeTable.Requires{ii,1} = rmmissing(nodeTable.Requires{ii,1});
+            end
+        end
+    end
+    
+    for nodeItr = 1:length(nodeTable.Node)
+        nodeTable.Node(nodeItr) = nodeItr;
+    end
+    
+    newNodeTable = nodeTable;
 end
 
 function mapOut = importMap()
@@ -194,51 +252,87 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
         else
             setPathCost = 1;
         end
-
-        for ii = 2:(length(currentPath(:,1))-1)
-            testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
-            
-            if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1:ii,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
-                numValid = numValid + 1;
-                
-                if (setPathCost)
-                    newPath = testPath;
-                    minCost = pathCost(testPath);
-                    
-                    setPathCost = 0;
-                end
-            else
-                continue
-            end
-            
-            if (insertedNode{1,1} == currentPath{ii,1} || insertedNode{1,1} == currentPath{(ii+1),1} || (length(testPath(:,1)) > 3 && insertedNode{1,1} == currentPath{(ii-1),1}) || ((length(testPath(:,1))-2)>ii && insertedNode{1,1} == currentPath{(ii+2),1}))
-                continue
-            end
-            
-            newCost = pathCost(testPath);
-            
-            if (newCost < minCost)
-                newPath = testPath;
-                minCost = newCost;
-            end
-        end
     else
         if (length(currentPath(:,1))==1)
-            testPath = [currentPath(1,:);insertedNode];
+            if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
+                testPath = [currentPath(1,:);insertedNode];
+                
+                minCost = pathCost(testPath);
+                newPath = testPath;
+                isValidInsert = 1;
+                
+                return;
+            else
+                minCost = 0;
+                newPath = currentPath;
+                isValidInsert = 0;
+                
+                return;
+            end
         else
             testPath = [currentPath(1,:);insertedNode;currentPath(2:end,:)];
         end
         
-        minCost = pathCost(testPath);
-        newPath = testPath;
+        if (isempty(insertedNode{1,4}{1,1}) || sum(ismember([currentPath{1,2}],insertedNode{1,4}{1,1}))==length(insertedNode{1,4}{1,1}))
+            numValid = numValid + 1;
+            minCost = pathCost(testPath);
+            newPath = testPath;
+            setPathCost = 0;
+        else
+            setPathCost = 1;
+        end
+    end
 
-        for ii = 2:(length(currentPath(:,1)))
-            if (ii==length(currentPath(:,1)))
-                testPath = [currentPath;insertedNode];
-            else
-                testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
+    for ii = 2:(length(currentPath(:,1))-1)
+        testPath = [currentPath(1:ii,:);insertedNode;currentPath((ii+1):end,:)];
+
+        if (isempty(insertedNode{1,4}{1,1}) || sum(ismember(insertedNode{1,4}{1,1},[currentPath{1:ii,2}]))==length(insertedNode{1,4}{1,1}))
+            numValid = numValid + 1;
+
+            if (setPathCost)
+                newPath = testPath;
+                minCost = pathCost(testPath);
+
+                setPathCost = 0;
             end
-            
+        else
+            continue
+        end
+
+        if (insertedNode{1,1} == currentPath{ii,1} || insertedNode{1,1} == currentPath{(ii+1),1} || (length(testPath(:,1)) > 3 && insertedNode{1,1} == currentPath{(ii-1),1}) || ((length(testPath(:,1))-2)>ii && insertedNode{1,1} == currentPath{(ii+2),1}))
+            continue
+        end
+
+        newCost = pathCost(testPath);
+
+        if (newCost < minCost)
+            newPath = testPath;
+            minCost = newCost;
+        end
+    end
+    
+    testPath = [currentPath;insertedNode];
+    testFinish = 1;
+
+    if (length(testPath(:,1))>4)
+        if (isempty(insertedNode{1,4}{1,1}) || sum(ismember(insertedNode{1,4}{1,1},[currentPath{:,2}]))==length(insertedNode{1,4}{1,1}))
+            numValid = numValid + 1;
+
+            if (setPathCost)
+                newPath = testPath;
+                minCost = pathCost(testPath);
+
+                setPathCost = 0;
+            end
+        else
+            testFinish = 0;
+        end
+
+        if (insertedNode{1,1} == currentPath{end,1} || (length(testPath(:,1)) > 3 && insertedNode{1,1} == currentPath{(length(currentPath(:,1))-1),1}))
+            testFinish = 0;
+        end
+
+        if (testFinish)
             newCost = pathCost(testPath);
 
             if (newCost < minCost)
@@ -258,14 +352,18 @@ function [newPath, minCost, isValidInsert] = insertNode(currentPath,insertedNode
 end
 
 function cost = pathCost(path)
-    portalAdjustment = 500;
+    breadcrumbAdjustment = 0.6;
     cost = 0;
     
     for ii = 1:(length(path(:,1))-1)
         node1 = path(ii,:);
         node2 = path((ii+1),:);
-    
-        cost = cost + (nodeDistance(node1, node2) + difficultyDifference(node1, node2));
+        
+        if(~isempty(node2{1,7}{1,1}) && sum(ismember([node2{1,7}{1,1}],node1{1,2}))>0)
+            cost = cost + breadcrumbAdjustment*(nodeDistance(node1, node2) + difficultyDifference(node1, node2));
+        else
+            cost = cost + (nodeDistance(node1, node2) + difficultyDifference(node1, node2));
+        end
     end
 end
 
@@ -285,6 +383,10 @@ end
 function d = nodeDistance(node1, node2)
     if (node1{1,1} == node2{1,1})
         d = 0;
+    elseif (~isempty(node1{1,6}{1,1}) && sum(ismember([node1{1,6}{1,1}],node2{1,2}))>0)
+        d = 0;
+    elseif (node1{1,8}~=node2{1,8})
+        d = realmax;
     else
         node1X = node1{1,3}(1);
         node1Y = node1{1,3}(2);
@@ -297,13 +399,11 @@ end
 
 function filepath = createPathPlot(dir, nodeTable, startNode, path, type, map) 
     solnFig = figure('Name','Path Solution','NumberTitle','off','Visible','off');
-    image(map);
+    imshow(map);
     
     hold on
 
     ax = gca;
-
-    set(ax,'YDir','normal');
     
     ax.XTick = [];
     ax.YTick = [];
@@ -319,9 +419,9 @@ function filepath = createPathPlot(dir, nodeTable, startNode, path, type, map)
         annotation(solnFig, 'arrow',X,Y,'Units','pixels','Color',[230 184 0]/255,'LineWidth',2);
     end
     
-    scatter(nodeTable.X(:),nodeTable.Y(:),'o','filled','b');
+    scatter(nodeTable.X(:),(length(map(:,1,1))-nodeTable.Y(:)),'o','filled','b');
 
-    scatter(nodeTable.X(startNode),nodeTable.Y(startNode),'o','filled','g');
+    scatter(nodeTable.X(startNode),(length(map(:,1,1))-nodeTable.Y(startNode)),'o','filled','g');
     
     if (type=="open" || type=="open-with-end")
         scatter(path{end,3}(1), path{end,3}(2),'o','filled','r');
@@ -410,6 +510,9 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, endNo
             unvisitedNodes{unvisitedItr,4} = nodeTable.isRepeatable(tableIdx);
             unvisitedNodes{unvisitedItr,5} = nodeTable.Requires(tableIdx);
             unvisitedNodes{unvisitedItr,6} = nodeTable.Level(tableIdx);
+            unvisitedNodes{unvisitedItr,7} = nodeTable.FastTravelsTo(tableIdx);
+            unvisitedNodes{unvisitedItr,8} = nodeTable.BreadcrumbsFrom(tableIdx);
+            unvisitedNodes{unvisitedItr,9} = nodeTable.Map(tableIdx);
 
             if (nodeTable.isRepeatable(tableIdx) == 1)
                 repeatableCounter = repeatableCounter + 1;
@@ -430,11 +533,11 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, endNo
     unvisitedLen = length([unvisitedNodes{:,1}]);
 
     if (type == "closed")
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode) nodeTable.FastTravelsTo(startNode) nodeTable.BreadcrumbsFrom(startNode) nodeTable.Map(startNode);nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode) nodeTable.FastTravelsTo(startNode) nodeTable.BreadcrumbsFrom(startNode) nodeTable.Map(startNode)};
     elseif (type == "open-with-end")
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode);nodeTable.Node(endNode) nodeTable.Name(endNode) [nodeTable.X(endNode) nodeTable.Y(endNode)] nodeTable.Requires(endNode) nodeTable.Level(endNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode) nodeTable.FastTravelsTo(startNode) nodeTable.BreadcrumbsFrom(startNode) nodeTable.Map(startNode);nodeTable.Node(endNode) nodeTable.Name(endNode) [nodeTable.X(endNode) nodeTable.Y(endNode)] nodeTable.Requires(endNode) nodeTable.Level(endNode) nodeTable.FastTravelsTo(endNode) nodeTable.BreadcrumbsFrom(endNode) nodeTable.Map(endNode)};
     else
-        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode)};
+        path = {nodeTable.Node(startNode) nodeTable.Name(startNode) [nodeTable.X(startNode) nodeTable.Y(startNode)] nodeTable.Requires(startNode) nodeTable.Level(startNode) nodeTable.FastTravelsTo(startNode) nodeTable.BreadcrumbsFrom(startNode) nodeTable.Map(startNode)};
     end
 
     pathPrevious = path;
@@ -444,7 +547,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, endNo
 
     while (unvisitedLen > numRepeatable || ~allRepeatsVisited)
         randIdx = randi(unvisitedLen);
-        randNode = unvisitedNodes(randIdx,[1:3 5 6]);
+        randNode = unvisitedNodes(randIdx,[1:3 5:9]);
         isRepeatable = unvisitedNodes{randIdx,4};
 
         if (isRepeatable)
@@ -454,7 +557,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, endNo
         if (isRepeatable && length(find([repeatableVisited{:,2}]>=repeatLimit)) == length(repeatableVisited(:,1)))
             while (isRepeatable)
                 randIdx = randi(unvisitedLen);
-                randNode = unvisitedNodes(randIdx,[1:3 5 6]);
+                randNode = unvisitedNodes(randIdx,[1:3 5:9]);
                 isRepeatable = unvisitedNodes{randIdx,4};
             end
         end
@@ -463,7 +566,7 @@ function [pathOut, pathCostOut] = algorithmIteration(nodeTable, startNode, endNo
             continue
         end
 
-        if (~isempty(randNode{1,4}{1,1}) && sum(ismember([path{:,2}],randNode{1,4}{1,1}))~=length(randNode{1,4}{1,1}))
+        if (~isempty(randNode{1,4}{1,1}) && sum(ismember(randNode{1,4}{1,1},[path{:,2}]))~=length(randNode{1,4}{1,1}))
             continue
         end
 
@@ -534,6 +637,17 @@ function pathOut = solver(nodeTable, startNode, endNode, type)
         if (noImprovementCount >= maxNoImprovement)
             break
         end
+    end
+    
+    clc
+    disp('Hide repeatable nodes?');
+    removeNodesYN = questdlg('Do you want to hide repeatable nodes?','Skip Repeat Nodes','Yes','No','No');
+    
+    if (strcmp(removeNodesYN,'Yes'))
+        repeatableNames = nodeTable.Name(nodeTable.isRepeatable==1);
+        remNodes = contains([previousPath{:,2}],repeatableNames);
+        
+        previousPath = previousPath(~remNodes,:);
     end
     
     pathOut = previousPath;
