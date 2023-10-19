@@ -1,0 +1,68 @@
+Name,X,Y,Map,isRepeatable,Level,Requires,FastTravelsTo,BreadcrumbsFrom,StartOnly
+Eversong Woods,3517,1677,0,0,1,,,,0
+Tirisfal Glades,3240,1443,0,0,1,,,,0
+Ghostlands,3517,1585,0,0,1,,,Eversong Woods,0
+Silverpine Forest,3211,1373,0,0,5,,,Tirisfal Glades,0
+Hillsbrad Foothills,3310,1340,0,0,7,,,Silverpine Forest,0
+Arathi Highlands,3425,1271,0,0,10,,,Hillsbrad Foothills,0
+Northern Stranglethorn,3331,711,0,0,10,,,Ashenvale,0
+The Cape of Stranglethorn,3275,671,0,0,10,,,Northern Stranglethorn,0
+The Hinterlands,3447,1365,0,0,10,,,Arathi Highlands,0
+Western Plaguelands,3367,1463,0,0,15,,,The Cape of Stranglethorn;The Hinterlands,0
+Eastern Plaguelands,3495,1457,0,0,15,,,Western Plaguelands,0
+Badlands,3457,1003,0,0,15,,,Eastern Plaguelands,0
+Searing Gorge,3343,1007,0,0,15,,,Badlands,0
+Burning Steppes,3387,947,0,0,15,,,Searing Gorge,0
+Swamp of Sorrows,3437,825,0,0,15,,,Burning Steppes,0
+Blasted Lands,3431,755,0,0,15,Temple of Ahn'Qiraj,,Swamp of Sorrows;Winterspring;Silithus,0
+The Deadmines,3201,809,0,0,45,,,,0
+Shadowfang Keep,3205,1345,0,0,45,Silverpine Forest,,Silverpine Forest,0
+Stormwind Stockade,3251,935,0,0,40,,,,0
+Gnomeregan,3255,1085,0,0,40,,,,0
+Scarlet Halls,3305,1475,0,0,40,Tirisfal Glades,,Tirisfal Glades,0
+Scarlet Monastery,3305,1475,0,0,40,Tirisfal Glades,,Tirisfal Glades,0
+Uldaman,3467,1039,0,0,40,Badlands,,Badlands,0
+Scholomance,3405,1403,0,0,45,Western Plaguelands,,Western Plaguelands,0
+Stratholme Main Gate,3457,1512,0,0,40,Eastern Plaguelands,,Eastern Plaguelands,0
+Stratholme Service Entrance,3457,1512,0,0,40,Eastern Plaguelands,,Eastern Plaguelands,0
+Blackrock Depths,3326,986,0,0,40,Searing Gorge,,Searing Gorge,0
+Sunken Temple,3472,826,0,0,40,Swamp of Sorrows,,Swamp of Sorrows,0
+Lower Blackrock Spire,3326,986,0,0,40,Searing Gorge,,Orgrimmar,0
+Molten Core,3326,986,0,0,45,Feralas;Dustwallow Marsh;Thousand Needles;Tanaris;Un'goro Crater;Silithus;Felwood;Winterspring;Western Plaguelands;Eastern Plaguelands;Badlands;Searing Gorge;Burning Steppes;Swamp of Sorrows;The Deadmines;Shadowfang Keep;Stormwind Stockade;Gnomeregan;Scarlet Halls;Scarlet Monastery;Uldaman;Scholomance;Stratholme Main Gate;Stratholme Service Entrance;Blackrock Depths;Sunken Temple;Lower Blackrock Spire;Ragefire Chasm;Wailing Caverns;Blackfathom Deeps;Razorfen Kraul;Maraudon;Warpwood Quarter;Capital Gardens;Gordok Commons;Razorfen Downs;Zul'Farrak,,,0
+Blackwing Lair,3326,986,0,0,45,Molten Core,,,0
+Silvermoon City,3522,1711,0,1,1,,Undercity;Orgrimmar,,0
+Undercity,3250,1427,0,1,1,,Silvermoon City,,0
+Brill,3259,1449,0,1,1,Tirisfal Glades,Orgrimmar;Grom'gol Base Camp,,0
+Grom'gol Base Camp,3299,724,0,1,1,,Orgrimmar;Brill,,0
+Booty Bay,3260,630,0,1,1,,Ratchet,,0
+Durotar,1145,1179,0,0,1,,,,0
+Mulgore,933,1081,0,0,1,,,,0
+Azshara,1219,1345,0,0,5,,,Durotar,0
+Northern Barrens,1055,1141,0,0,5,,,Durotar;Mulgore,0
+Ashenvale,1017,1317,0,0,7,,,Azshara;Northern Barrens,0
+Stonetalon Mountains,855,1247,0,0,10,,,Ashenvale,0
+Desolace,833,1097,0,0,10,,,Stonetalon Mountains,0
+Southern Barrens,1025,1009,0,0,10,,,Stonetalon Mountains,0
+Feralas,869,921,0,0,15,,,Desolace,0
+Dustwallow Marsh,1063,981,0,0,15,,,Southern Barrens;The Cape of Stranglethorn,0
+Thousand Needles,1043,899,0,0,15,,,Feralas;Dustwallow Marsh,0
+Felwood,979,1467,0,0,15,,,Thousand Needles,0
+Tanaris,1089,743,0,0,15,,,Thousand Needles,0
+Un'goro Crater,999,799,0,0,15,,,Tanaris,0
+Winterspring,1149,1563,0,0,15,,,Felwood,0
+Silithus,875,779,0,0,15,,,Un'goro Crater;Winterspring,0
+Ragefire Chasm,1145,1249,0,0,40,,,Orgrimmar,0
+Wailing Caverns,1053,1095,0,0,40,Northern Barrens,,Northern Barrens,0
+Blackfathom Deeps,879,1379,0,0,40,Ashenvale,,Ashenvale,0
+Razorfen Kraul,1001,969,0,0,40,Southern Barrens,,Southern Barrens,0
+Maraudon,779,1091,0,0,40,Desolace,,Desolace,0
+Warpwood Quarter,853,949,0,0,40,Feralas,,Feralas,0
+Capital Gardens,853,949,0,0,40,Feralas,,Feralas,0
+Gordok Commons,853,949,0,0,40,Feralas,,Feralas,0
+Razorfen Downs,1041,927,0,0,40,Thousand Needles,,Thousand Needles,0
+Zul'Farrak,1071,1519,0,0,40,Tanaris,,Tanaris,0
+Ruins of Ahn'Qiraj,841,739,0,0,45,Blackwing Lair,,,0
+Temple of Ahn'Qiraj,821,741,0,0,45,Ruins of Ahn'Qiraj,,,0
+Orgrimmar,1145,1249,0,1,1,,Brill;Grom'gol Base Camp;Thunder Bluff;Silvermoon City,,0
+Thunder Bluff,919,1103,0,1,1,,Orgrimmar,,0
+Ratchet,1099,1125,0,1,1,,Booty Bay,,0
